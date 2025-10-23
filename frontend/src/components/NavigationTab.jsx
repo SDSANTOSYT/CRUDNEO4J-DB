@@ -1,32 +1,45 @@
-import "../static/CustomButton.css";
 import CustomButton from "./CustomButton";
 import "../static/NavigationTab.css";
 
-function NavigationTab({ label, onClick }) {
+function NavigationTab({ selection, setSelection }) {
+  const isUserSelected = selection == 1 ? true : false;
+  const isPostSelected = selection == 2 ? true : false;
+  const isCommentSelected = selection == 3 ? true : false;
+
+  let selectUser = () => {
+    setSelection(1);
+    console.log(selection);
+  };
+  let selectPost = () => {
+    setSelection(2);
+    console.log(selection);
+  };
+  let selectComment = () => {
+    setSelection(3);
+    console.log(selection);
+  };
+
   return (
     <ul>
       <li>
         <CustomButton
           label={"Usuario"}
-          onClick={() => {
-            console.log("hola");
-          }}
+          onClick={selectUser}
+          selected={isUserSelected}
         />
       </li>
       <li>
         <CustomButton
           label={"Post"}
-          onClick={() => {
-            console.log("hola");
-          }}
+          onClick={selectPost}
+          selected={isPostSelected}
         />
       </li>
       <li>
         <CustomButton
           label={"Comentario"}
-          onClick={() => {
-            console.log("hola");
-          }}
+          onClick={selectComment}
+          selected={isCommentSelected}
         />
       </li>
     </ul>
