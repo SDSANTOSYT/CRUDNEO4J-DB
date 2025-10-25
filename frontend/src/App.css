@@ -32,6 +32,29 @@ h2 {
     text-align: center;
 }
 
+/* --- Tabla --- */
+
 .table-container {
-    background-color: var(--color1);
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 40vh;
+
+    border-radius: 20px;
+
+    background-color: var(--color5);
 }
+
+.btn {
+    margin-top:1rem;
+    border: none;
+    background-color: var(--color2);
+    color: #f7f7f7;
+    padding: 0.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0px 5px 5px var(--color3);
+}
+
