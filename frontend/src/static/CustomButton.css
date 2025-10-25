@@ -1,0 +1,27 @@
+:root {
+    --labelColor: #eacdc2;
+    --labelIdle: #1a1423;
+    --selectedButton: #774C60;
+}
+
+button {
+    background-color: var(--labelColor);
+    border: var(--labelColor);
+    width: 150px;
+    border-radius: 3vw;
+    color: var(--labelIdle);
+}
+
+button.selected {
+    background-color: var(--selectedButton);
+    color: var(--labelColor);
+    border: 3px;
+    border-style: solid;
+}
+
+button:hover {
+    background-color: var(--selectedButton);
+    color: var(--labelColor);
+    transition: all;
+    transition-duration: 250ms;
+}
