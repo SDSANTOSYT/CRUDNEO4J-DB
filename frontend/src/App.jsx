@@ -8,7 +8,6 @@ import { Table } from "./components/Table";
 import { Modal } from "./components/Modal";
 
 function App() {
-
   const [modalOpen, setModalOpen] = useState(false);
 
   const [selectedTab, setSelection] = useState(0);
@@ -24,20 +23,21 @@ function App() {
   const handleEditRow = (idx) => {
     setRowToEdit(idx);
     setModalOpen(true);
-  }
+  };
 
   const handleDeleteRow = (targetIndex) => {
     setRows(rows.filter((row, index) => index !== targetIndex));
-  }
+  };
 
   const handleSubmit = (newRow) => {
-    rowToEdit === null ?
-      setRows([...rows, newRow]) :
-      setRows(
-        rows.map((currRow, idx) => {
-          if (idx !== rowToEdit) return currRow;
-          return newRow;
-        }))
+    rowToEdit === null
+      ? setRows([...rows, newRow])
+      : setRows(
+          rows.map((currRow, idx) => {
+            if (idx !== rowToEdit) return currRow;
+            return newRow;
+          })
+        );
   };
 
   return (
@@ -50,20 +50,29 @@ function App() {
       <NavigationTab selection={selectedTab} setSelection={setSelection} />
 
       <div className="table-container">
-        <Table rows={rows} deleteRow={handleDeleteRow} editRow={handleEditRow} />
-        <button className="btn"
+        <Table
+          rows={rows}
+          deleteRow={handleDeleteRow}
+          editRow={handleEditRow}
+        />
+        <button
+          className="btn"
           onClick={() => {
             setModalOpen(true);
             setRowToEdit(null);
-          }} >Agregar Nuevo</button>
-        {modalOpen &&
-          <Modal closeModal={() =>
-            setModalOpen(false)}
+          }}
+        >
+          Agregar Nuevo
+        </button>
+        {modalOpen && (
+          <Modal
+            closeModal={() => setModalOpen(false)}
             onSubmit={handleSubmit}
             defaultValue={rowToEdit !== null && rows[rowToEdit]}
-          />}
+            formFields={Object.keys(rows[0])}
+          />
+        )}
       </div>
-
     </div>
   );
 }
