@@ -1,6 +1,7 @@
 import CustomButton from "./CustomButton";
 import "../static/NavigationTab.css";
 
+
 function NavigationTab({ selection, setSelection }) {
   const isUserSelected = selection == 1 ? true : false;
   const isPostSelected = selection == 2 ? true : false;
@@ -41,8 +42,10 @@ function NavigationTab({ selection, setSelection }) {
           onClick={selectComment}
           selected={isCommentSelected}
         />
-      </li>
+      </li>    
+
     </ul>
+
   );
 }
 
