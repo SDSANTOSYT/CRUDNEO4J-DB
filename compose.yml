@@ -2,6 +2,8 @@ services:
   frontend:
     build:
       context: ./frontend
+    depends_on:
+      - backend
     ports:
       - "5173:5173"
     develop:
@@ -9,5 +11,18 @@ services:
         - path: ./frontend/package.json
           action: rebuild
         - path: ./frontend
+          target: /app
+          action: sync
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - 5000:5000
+    develop:
+      watch:
+        - path: ./backend/requirements.txt
+          action: rebuild
+        - path: ./backend
           target: /app
           action: sync
