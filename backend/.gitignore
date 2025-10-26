@@ -1,3 +1,18 @@
+<<<<<<< HEAD
+# Ignorar entorno virtual
+venv/
+
+# Ignorar archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Ignorar credenciales privadas
+.env
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+=======
 # Logs
 logs
 *.log
@@ -137,3 +152,4 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+>>>>>>> d6fd3114dec15ae7cc37e1be13540ee3bc132e21
