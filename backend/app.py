@@ -24,28 +24,34 @@ def node_label_for_type(type_name: str):
 def get_users():
     with driver.session() as session:
         result = session.run("MATCH (u:User) RETURN u { .* } AS user")
-        return jsonify([r["user"] for r in result]), 200
+        users = [r["user"] for r in result]
+        print(f"Users found: {users}")  # Debug
+        return jsonify(users), 200
 
 @app.route("/posts", methods=["GET"])
 def get_posts():
     with driver.session() as session:
         result = session.run("""
             MATCH (p:Post)
-            OPTIONAL MATCH (a:User)-[:CREATED]->(p)
+            OPTIONAL MATCH (a:User)-[:PUBLICA]->(p)
             RETURN p { .*, authorId: coalesce(a.id, null) } AS post
         """)
-        return jsonify([r["post"] for r in result]), 200
+        posts = [r["post"] for r in result]
+        print(f"Posts found: {posts}")  # Debug
+        return jsonify(posts), 200
 
 @app.route("/comments", methods=["GET"])
 def get_comments():
     with driver.session() as session:
         result = session.run("""
             MATCH (c:Comment)
-            OPTIONAL MATCH (a:User)-[:WROTE]->(c)
-            OPTIONAL MATCH (p:Post)-[:HAS_COMMENT]->(c)
+            OPTIONAL MATCH (a:User)-[:HACE]->(c)
+            OPTIONAL MATCH (p:Post)-[:TIENE]->(c)
             RETURN c { .*, authorId: coalesce(a.id, null), postId: coalesce(p.id, null) } AS comment
         """)
-        return jsonify([r["comment"] for r in result]), 200
+        comments = [r["comment"] for r in result]
+        print(f"Comments found: {comments}")  # Debug
+        return jsonify(comments), 200
 
 @app.route("/node/<type_name>", methods=["POST"])
 def create_node(type_name):
@@ -94,6 +100,14 @@ def delete_node(type_name, node_id):
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "time": datetime.datetime.utcnow().isoformat() + "Z"}), 200
+
+# Endpoint de debug para verificar la base de datos
+@app.route("/debug/all", methods=["GET"])
+def debug_all():
+    with driver.session() as session:
+        result = session.run("MATCH (n) RETURN labels(n) as labels, n { .* } as node LIMIT 20")
+        nodes = [{"labels": r["labels"], "node": r["node"]} for r in result]
+        return jsonify(nodes), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
