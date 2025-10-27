@@ -19,6 +19,9 @@ driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 def node_label_for_type(type_name: str):
     mapping = {"user": "User", "post": "Post", "comment": "Comment"}
     return mapping.get(type_name.lower())
+def node_id_label_for_type(type_name: str):
+    mapping = {"user": "idu", "post": "idp", "comment": "consec"}
+    return mapping.get(type_name.lower())
 
 @app.route("/users", methods=["GET"])
 def get_users():
@@ -34,7 +37,7 @@ def get_posts():
         result = session.run("""
             MATCH (p:Post)
             OPTIONAL MATCH (a:User)-[:PUBLICA]->(p)
-            RETURN p { .*, authorId: coalesce(a.id, null) } AS post
+            RETURN p { .*, idu: coalesce(a.idu, null) } AS post
         """)
         posts = [r["post"] for r in result]
         print(f"Posts found: {posts}")  # Debug
@@ -47,7 +50,8 @@ def get_comments():
             MATCH (c:Comment)
             OPTIONAL MATCH (a:User)-[:HACE]->(c)
             OPTIONAL MATCH (p:Post)-[:TIENE]->(c)
-            RETURN c { .*, authorId: coalesce(a.id, null), postId: coalesce(p.id, null) } AS comment
+            OPTIONAL MATCH (au:User)-[:AUTORIZA]->(c)
+            RETURN c { .*, idu: coalesce(a.idu, null), idp: coalesce(p.idp, null), idau: coalesce(au.idu, null) } AS comment
         """)
         comments = [r["comment"] for r in result]
         print(f"Comments found: {comments}")  # Debug
@@ -57,28 +61,70 @@ def get_comments():
 def create_node(type_name):
     body = request.get_json()
     label = node_label_for_type(type_name)
+    node_id_label = node_id_label_for_type(type_name)
     if not label:
         return jsonify({"error": "Tipo no válido"}), 400
+    if not node_id_label:
+        return jsonify({"error": "Tipo no válido"}), 400
 
-    node_id = body.get("id")
+    node_id = body.get(f"{node_id_label}")
     if not node_id:
         return jsonify({"error": "Falta 'id'"}), 400
-
+    
     with driver.session() as session:
-        cypher = f"MERGE (n:{label} {{ id: $id }}) SET n += $props RETURN n {{ .* }} as node"
-        result = session.run(cypher, id=node_id, props=body)
-        node = result.single()["node"]
-    return jsonify(node), 201
+        cypher = f"""
+        MERGE (n:{label} {{ {node_id_label}: $id }})
+        SET n += $props
+        """
+        if label == "Post":
+           cypher += """
+           WITH n
+           MERGE (u:User {idu: $idu})
+           MERGE (u)-[:PUBLICA]->(n)
+           """
+        elif label == "Comment":
+            cypher += """
+            WITH n
+            MERGE (u:User {idu: $idu})
+            MERGE (aut:User {idu: $idau})
+            MERGE (p:Post {idp: $idp})
+            MERGE (p)-[:TIENE]->(n)
+            MERGE (u)-[:HACE]->(n)
+            MERGE (aut)-[:AUTORIZA]->(n)
+            """
+        cypher += "RETURN n { .* } AS node"
+        
+        result = session.run(
+            cypher,
+            id=node_id,
+            props=body,
+            idu=body.get("idu"),
+            idp=body.get("idp"),
+            idau=body.get("idau")
+    )
+
+        record = result.single()
+        if record is None:
+            print("No se devolvió ningún resultado del query:")
+            print(cypher)
+            return jsonify({"error": "No se pudo crear el nodo o no se encontró el usuario/post"}), 400
+
+        node = record["node"]
+        return jsonify(node), 201
+
 
 @app.route("/node/<type_name>/<node_id>", methods=["PUT"])
 def update_node(type_name, node_id):
     body = request.get_json()
     label = node_label_for_type(type_name)
+    node_id_label = node_id_label_for_type(type_name)
     if not label:
+        return jsonify({"error": "Tipo no válido"}), 400
+    if not node_id_label:
         return jsonify({"error": "Tipo no válido"}), 400
 
     with driver.session() as session:
-        cypher = f"MATCH (n:{label} {{ id: $id }}) SET n += $props RETURN n {{ .* }} as node"
+        cypher = f"MATCH (n:{label} {{ {node_id_label}: $id }}) SET n += $props RETURN n {{ .* }} as node"
         result = session.run(cypher, id=node_id, props=body)
         record = result.single()
         if not record:
@@ -88,11 +134,14 @@ def update_node(type_name, node_id):
 @app.route("/node/<type_name>/<node_id>", methods=["DELETE"])
 def delete_node(type_name, node_id):
     label = node_label_for_type(type_name)
+    node_id_label = node_id_label_for_type(type_name)
     if not label:
+        return jsonify({"error": "Tipo no válido"}), 400
+    if not node_id_label:
         return jsonify({"error": "Tipo no válido"}), 400
 
     with driver.session() as session:
-        res = session.run(f"MATCH (n:{label} {{ id: $id }}) DETACH DELETE n RETURN 1", id=node_id)
+        res = session.run(f"MATCH (n:{label} {{ {node_id_label}: $id }}) DETACH DELETE n RETURN 1", id=node_id)
         if not res.single():
             return jsonify({"error": "Nodo no encontrado"}), 404
     return jsonify({"deleted": True}), 200

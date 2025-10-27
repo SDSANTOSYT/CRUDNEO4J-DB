@@ -11,13 +11,13 @@ driver = GraphDatabase.driver(
 
 with driver.session() as session:
     # Limpiar base de datos completamente
-    print("🧹 Limpiando base de datos...")
+    print("---Limpiando base de datos...")
     session.run("MATCH (n) DETACH DELETE n")
     
     # ==========================================
     # USUARIOS - Atributos: idu, nombre
     # ==========================================
-    print("👤 Creando Usuarios...")
+    print("---Creando Usuarios...")
     session.run("CREATE (:User {idu:'u1', nombre:'Sergio'})")
     session.run("CREATE (:User {idu:'u2', nombre:'Ana'})")
     session.run("CREATE (:User {idu:'u3', nombre:'Carlos'})")
@@ -25,14 +25,14 @@ with driver.session() as session:
     # ==========================================
     # POSTS - Atributos: idp, contenido
     # ==========================================
-    print("📝 Creando Posts...")
+    print("---Creando Posts...")
     session.run("CREATE (:Post {idp:'p1', contenido:'Mi primer post sobre Neo4j'})")
     session.run("CREATE (:Post {idp:'p2', contenido:'Aprendiendo bases de datos grafos'})")
     
     # ==========================================
     # COMENTARIOS - Atributos: consec, fechorCom, likeNotLike, fechorAut, contenido
     # ==========================================
-    print("💬 Creando Comentarios...")
+    print("---Creando Comentarios...")
     session.run("""
         CREATE (:Comment {
             consec:'c1', 
@@ -64,7 +64,7 @@ with driver.session() as session:
     # ==========================================
     # RELACIONES
     # ==========================================
-    print("🔗 Creando Relaciones...")
+    print("---Creando Relaciones...")
     
     # Relación PUBLICA: Usuario -> Post
     session.run("MATCH (u:User {idu:'u1'}), (p:Post {idp:'p1'}) CREATE (u)-[:PUBLICA]->(p)")
@@ -85,9 +85,9 @@ with driver.session() as session:
     session.run("MATCH (u:User {idu:'u1'}), (c:Comment {consec:'c2'}) CREATE (u)-[:AUTORIZA]->(c)")
     session.run("MATCH (u:User {idu:'u2'}), (c:Comment {consec:'c3'}) CREATE (u)-[:AUTORIZA]->(c)")
 
-print("\n✅ Seed completado exitosamente!")
+print("\n---Seed completado exitosamente!")
 print("=" * 50)
-print("📊 DATOS CREADOS:")
+print("---DATOS CREADOS:")
 print("  - 3 Usuarios (idu, nombre)")
 print("  - 2 Posts (idp, contenido)")
 print("  - 3 Comentarios (consec, fechorCom, likeNotLike, fechorAut, contenido)")

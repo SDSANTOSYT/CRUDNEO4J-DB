@@ -109,6 +109,7 @@ function App() {
 
     // Los datos ya vienen con los campos correctos del formulario
     const dataToSend = { ...newRow };
+    console.log(JSON.stringify(dataToSend));
 
     try {
       if (rowToEdit === null) {
@@ -136,7 +137,7 @@ function App() {
         if (selectedTab === 1) {
           nodeId = rowData.idu;
         } else if (selectedTab === 2) {
-          nodeId = rowData.idp;
+          nodeId = [rowData.idp];
         } else if (selectedTab === 3) {
           nodeId = rowData.consec;
         }
@@ -176,9 +177,18 @@ function App() {
       case 1:
         return ["idu", "nombre"];
       case 2:
-        return ["idp", "contenido"];
+        return ["idp", "idu", "contenido"];
       case 3:
-        return ["consec", "fechorCom", "likeNotLike", "fechorAut", "contenido"];
+        return [
+          "idp",
+          "consec",
+          "idu",
+          "idau",
+          "fechorCom",
+          "likeNotLike",
+          "fechorAut",
+          "contenido",
+        ];
       default:
         return [];
     }
