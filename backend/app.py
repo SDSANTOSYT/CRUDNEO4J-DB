@@ -19,6 +19,7 @@ driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 def node_label_for_type(type_name: str):
     mapping = {"user": "User", "post": "Post", "comment": "Comment"}
     return mapping.get(type_name.lower())
+
 def node_id_label_for_type(type_name: str):
     mapping = {"user": "idu", "post": "idp", "comment": "consec"}
     return mapping.get(type_name.lower())
@@ -157,6 +158,68 @@ def debug_all():
         result = session.run("MATCH (n) RETURN labels(n) as labels, n { .* } as node LIMIT 20")
         nodes = [{"labels": r["labels"], "node": r["node"]} for r in result]
         return jsonify(nodes), 200
+
+# INCISO C: Consulta 1 - Usuario que ha hecho un USUARIO mostrando como submenú
+@app.route("/consulta/posts-usuario/<user_id>", methods=["GET"])
+def get_posts_usuario(user_id):
+    """
+    Consulta 1: Muestra que USUARIO ha hecho un POST como submenú
+    Retorna los posts de un usuario específico
+    """
+    with driver.session() as session:
+        result = session.run("""
+            MATCH (u:User {idu: $user_id})-[:PUBLICA]->(p:Post)
+            RETURN u.idu AS idu,
+                   u.nombre AS nombreUsuario,
+                   p.idp AS idp,
+                   p.contenido AS contenido
+            ORDER BY p.idp
+        """, user_id=user_id)
+        
+        posts = [{
+            "idu": r["idu"],
+            "nombreUsuario": r["nombreUsuario"],
+            "idp": r["idp"],
+            "contenido": r["contenido"]
+        } for r in result]
+        
+        print(f"✅ Posts del usuario {user_id}: {posts}")
+        return jsonify(posts), 200
+
+# INCISO C: Consulta 2 - Comentarios de un POST con info del usuario
+@app.route("/consulta/comentarios-post/<post_id>", methods=["GET"])
+def get_comentarios_post(post_id):
+    """
+    Retorna los comentarios de un POST específico mostrando:
+    - Fecha-hora de creación del comentario (fechorCom)
+    - Fecha-hora de autorización (fechorAut)
+    - Usuario que hizo el comentario
+    - Si fue megusta o nomegusta
+    """
+    with driver.session() as session:
+        result = session.run("""
+            MATCH (p:Post {idp: $post_id})-[:TIENE]->(c:Comment)
+            MATCH (u:User)-[:HACE]->(c)
+            RETURN c.fechorCom AS fechorCom,
+                   c.fechorAut AS fechorAut,
+                   u.nombre AS usuario,
+                   c.likeNotLike AS likeNotLike,
+                   c.contenido AS contenido,
+                   c.consec AS consec
+            ORDER BY c.fechorCom DESC
+        """, post_id=post_id)
+        
+        comentarios = [{
+            "consec": r["consec"],
+            "fechorCom": r["fechorCom"],
+            "fechorAut": r["fechorAut"],
+            "usuario": r["usuario"],
+            "likeNotLike": r["likeNotLike"],
+            "contenido": r["contenido"]
+        } for r in result]
+        
+        print(f"✅ Comentarios del post {post_id}: {comentarios}")
+        return jsonify(comentarios), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0",port=5000,debug=True)

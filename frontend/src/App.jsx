@@ -14,6 +14,14 @@ function App() {
   const [rowToEdit, setRowToEdit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estados para Inciso C
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedPostId, setSelectedPostId] = useState("");
+  const [postsUsuario, setPostsUsuario] = useState([]);
+  const [comentariosPost, setComentariosPost] = useState([]);
+  const [loadingConsulta1, setLoadingConsulta1] = useState(false);
+  const [loadingConsulta2, setLoadingConsulta2] = useState(false);
 
   // Mapeo de tabs a endpoints y tipos
   const tabConfig = {
@@ -35,7 +43,7 @@ function App() {
 
     try {
       const config = tabConfig[selectedTab];
-      console.log(`Fetching from: http://localhost:5000${config.endpoint}`);
+      console.log(`🔍 Fetching from: http://localhost:5000${config.endpoint}`);
 
       const response = await fetch(`http://localhost:5000${config.endpoint}`);
 
@@ -44,16 +52,16 @@ function App() {
       }
 
       const data = await response.json();
-      console.log(` Data received from backend:`, data);
+      console.log(`📦 Data received from backend:`, data);
 
       // Transformar datos según el tipo de entidad
       const transformedData = transformDataByTab(data, selectedTab);
-      console.log(`Transformed data:`, transformedData);
+      console.log(`✨ Transformed data:`, transformedData);
 
       setRows(transformedData);
     } catch (err) {
       setError(err.message);
-      console.error("Error fetching data:", err);
+      console.error("❌ Error fetching data:", err);
       setRows([]);
     } finally {
       setLoading(false);
@@ -137,7 +145,7 @@ function App() {
         if (selectedTab === 1) {
           nodeId = rowData.idu;
         } else if (selectedTab === 2) {
-          nodeId = [rowData.idp];
+          nodeId = rowData.idp;
         } else if (selectedTab === 3) {
           nodeId = rowData.consec;
         }
@@ -177,20 +185,83 @@ function App() {
       case 1:
         return ["idu", "nombre"];
       case 2:
-        return ["idp", "idu", "contenido"];
+        return ["idp", "contenido"];
       case 3:
-        return [
-          "idp",
-          "consec",
-          "idu",
-          "idau",
-          "fechorCom",
-          "likeNotLike",
-          "fechorAut",
-          "contenido",
-        ];
+        return ["consec", "fechorCom", "likeNotLike", "fechorAut", "contenido"];
       default:
         return [];
+    }
+  };
+
+  // Función para consultar posts de un usuario (Inciso C - Consulta 1)
+  const consultarPostsUsuario = async () => {
+    console.log("=== CONSULTA 1 INICIADA ===");
+    console.log("Usuario ID:", selectedUserId);
+    
+    if (!selectedUserId) {
+      alert("Por favor ingresa un ID de Usuario");
+      return;
+    }
+
+    setLoadingConsulta1(true);
+    try {
+      const url = `http://localhost:5000/consulta/posts-usuario/${selectedUserId}`;
+      console.log("Fetching URL:", url);
+      
+      const response = await fetch(url);
+      console.log("Response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("✅ Posts del usuario recibidos:", data);
+      console.log("Cantidad de posts:", data.length);
+      
+      setPostsUsuario(data);
+    } catch (err) {
+      console.error("❌ Error consultando posts del usuario:", err);
+      setPostsUsuario([]);
+      alert("Error al consultar posts del usuario: " + err.message);
+    } finally {
+      setLoadingConsulta1(false);
+    }
+  };
+
+  // Función para consultar comentarios de un POST (Inciso C - Consulta 2)
+  const consultarComentariosPost = async () => {
+    console.log("=== CONSULTA 2 INICIADA ===");
+    console.log("Post ID:", selectedPostId);
+    
+    if (!selectedPostId) {
+      alert("Por favor ingresa un ID de Post");
+      return;
+    }
+
+    setLoadingConsulta2(true);
+    try {
+      const url = `http://localhost:5000/consulta/comentarios-post/${selectedPostId}`;
+      console.log("Fetching URL:", url);
+      
+      const response = await fetch(url);
+      console.log("Response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("✅ Comentarios del post recibidos:", data);
+      console.log("Cantidad de comentarios:", data.length);
+      
+      setComentariosPost(data);
+    } catch (err) {
+      console.error("❌ Error consultando comentarios:", err);
+      setComentariosPost([]);
+      alert("Error al consultar comentarios del post: " + err.message);
+    } finally {
+      setLoadingConsulta2(false);
     }
   };
 
@@ -205,21 +276,12 @@ function App() {
 
       {selectedTab === null ? (
         <div className="table-container">
-          <p
-            style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "#666",
-              fontSize: "18px",
-            }}
-          >
-            Selecciona Usuario, Post o Comentario para comenzar
-          </p>
+          <p>Selecciona Usuario, Post o Comentario para comenzar</p>
         </div>
       ) : (
         <div className="table-container">
           {loading && <p>Cargando datos...</p>}
-          {error && <p style={{ color: "red" }}>Error: {error}</p>}
+          {error && <p style={{ color: "var(--color1)" }}>Error: {error}</p>}
 
           {!loading && rows.length > 0 && (
             <Table
@@ -230,9 +292,7 @@ function App() {
           )}
 
           {!loading && rows.length === 0 && !error && (
-            <p style={{ textAlign: "center", padding: "20px", color: "#666" }}>
-              No hay datos para mostrar
-            </p>
+            <p>No hay datos para mostrar</p>
           )}
 
           <button
@@ -255,6 +315,107 @@ function App() {
           )}
         </div>
       )}
+
+      {/* Sección Inciso C */}
+      <div style={{ marginTop: "60px", marginBottom: "60px" }}>
+        <h2 style={{ marginBottom: "40px" }}>Inciso C - Consultas</h2>
+        
+        {/* Consulta 1: Posts de un Usuario */}
+        <div className="table-container" style={{ marginBottom: "40px", minHeight: "auto", height: "auto", padding: "30px" }}>
+          <h3 style={{ color: "var(--color4)", fontSize: "24px", marginBottom: "15px", fontFamily: "Arial, Helvetica, sans-serif" }}>
+            Consulta 1: Posts de un Usuario
+          </h3>
+          <p>Muestra los posts que ha creado un usuario específico</p>
+
+          <div style={{ marginBottom: "30px", display: "flex", gap: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ color: "var(--color4)", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif" }}>
+              ID del Usuario:
+            </label>
+            <input
+              type="text"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              placeholder="Ej: u1"
+              style={{
+                padding: "10px",
+                borderRadius: "10px",
+                border: "none",
+                width: "200px",
+                fontFamily: "Arial, Helvetica, sans-serif"
+              }}
+            />
+            <button
+              className="btn"
+              onClick={consultarPostsUsuario}
+              disabled={loadingConsulta1}
+            >
+              {loadingConsulta1 ? "Consultando..." : "Consultar"}
+            </button>
+          </div>
+
+          {loadingConsulta1 ? (
+            <p>Cargando...</p>
+          ) : postsUsuario.length > 0 ? (
+            <div className="table-wrapper">
+              <Table
+                rows={postsUsuario}
+                deleteRow={() => {}}
+                editRow={() => {}}
+              />
+            </div>
+          ) : (
+            <p>No hay posts para mostrar. Ingresa un ID de usuario y presiona Consultar.</p>
+          )}
+        </div>
+
+        {/* Consulta 2: Comentarios de un Post */}
+        <div className="table-container" style={{ minHeight: "auto", height: "auto", padding: "30px" }}>
+          <h3 style={{ color: "var(--color4)", fontSize: "24px", marginBottom: "15px", fontFamily: "Arial, Helvetica, sans-serif" }}>
+            Consulta 2: Comentarios de un POST
+          </h3>
+          <p>Lista los comentarios de un POST mostrando fecha de creación, fecha de autorización, usuario que lo hizo y si fue "megusta" o "nomegusta"</p>
+
+          <div style={{ marginBottom: "30px", display: "flex", gap: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ color: "var(--color4)", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif" }}>
+              ID del Post:
+            </label>
+            <input
+              type="text"
+              value={selectedPostId}
+              onChange={(e) => setSelectedPostId(e.target.value)}
+              placeholder="Ej: p1"
+              style={{
+                padding: "10px",
+                borderRadius: "10px",
+                border: "none",
+                width: "200px",
+                fontFamily: "Arial, Helvetica, sans-serif"
+              }}
+            />
+            <button
+              className="btn"
+              onClick={consultarComentariosPost}
+              disabled={loadingConsulta2}
+            >
+              {loadingConsulta2 ? "Consultando..." : "Consultar"}
+            </button>
+          </div>
+
+          {loadingConsulta2 ? (
+            <p>Cargando...</p>
+          ) : comentariosPost.length > 0 ? (
+            <div className="table-wrapper">
+              <Table
+                rows={comentariosPost}
+                deleteRow={() => {}}
+                editRow={() => {}}
+              />
+            </div>
+          ) : (
+            <p>No hay comentarios para mostrar. Ingresa un ID de post y presiona Consultar.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
