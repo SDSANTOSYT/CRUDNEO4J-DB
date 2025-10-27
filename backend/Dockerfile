@@ -29,6 +29,6 @@ COPY . .
 # Expose the port that the application listens on.
 EXPOSE 5000
 
+RUN python seed_data.py
 # Run the application.
-CMD python seed_data.py
 CMD python app.py

@@ -19,7 +19,7 @@ function App() {
   const tabConfig = {
     1: { endpoint: "/users", type: "user", label: "User" },
     2: { endpoint: "/posts", type: "post", label: "Post" },
-    3: { endpoint: "/comments", type: "comment", label: "Comment" }
+    3: { endpoint: "/comments", type: "comment", label: "Comment" },
   };
 
   // Fetch data cuando cambia el tab
@@ -32,24 +32,24 @@ function App() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const config = tabConfig[selectedTab];
       console.log(`Fetching from: http://localhost:5000${config.endpoint}`);
-      
+
       const response = await fetch(`http://localhost:5000${config.endpoint}`);
-      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log(` Data received from backend:`, data);
-      
+
       // Transformar datos según el tipo de entidad
       const transformedData = transformDataByTab(data, selectedTab);
       console.log(`Transformed data:`, transformedData);
-      
+
       setRows(transformedData);
     } catch (err) {
       setError(err.message);
@@ -75,7 +75,7 @@ function App() {
   const handleDeleteRow = async (targetIndex) => {
     const config = tabConfig[selectedTab];
     const rowToDelete = rows[targetIndex];
-    
+
     // Obtener el ID correcto según el tipo de entidad
     let nodeId;
     if (selectedTab === 1) {
@@ -106,10 +106,10 @@ function App() {
 
   const handleSubmit = async (newRow) => {
     const config = tabConfig[selectedTab];
-    
+
     // Los datos ya vienen con los campos correctos del formulario
     const dataToSend = { ...newRow };
-    
+
     try {
       if (rowToEdit === null) {
         // Crear nuevo
@@ -118,7 +118,7 @@ function App() {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(dataToSend)
+            body: JSON.stringify(dataToSend),
           }
         );
 
@@ -132,7 +132,7 @@ function App() {
         // Actualizar existente
         const rowData = rows[rowToEdit];
         let nodeId;
-        
+
         if (selectedTab === 1) {
           nodeId = rowData.idu;
         } else if (selectedTab === 2) {
@@ -146,7 +146,7 @@ function App() {
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(dataToSend)
+            body: JSON.stringify(dataToSend),
           }
         );
 
@@ -166,17 +166,21 @@ function App() {
   // Obtener los campos del formulario según el tab
   const getFormFields = () => {
     if (selectedTab === null) return [];
-    
+
     if (rows.length > 0) {
       return Object.keys(rows[0]);
     }
-    
+
     // Retornar campos por defecto según el tab cuando no hay datos
-    switch(selectedTab) {
-      case 1: return ["idu", "nombre"];
-      case 2: return ["idp", "contenido"];
-      case 3: return ["consec", "fechorCom", "likeNotLike", "fechorAut", "contenido"];
-      default: return [];
+    switch (selectedTab) {
+      case 1:
+        return ["idu", "nombre"];
+      case 2:
+        return ["idp", "contenido"];
+      case 3:
+        return ["consec", "fechorCom", "likeNotLike", "fechorAut", "contenido"];
+      default:
+        return [];
     }
   };
 
@@ -191,15 +195,22 @@ function App() {
 
       {selectedTab === null ? (
         <div className="table-container">
-          <p style={{ textAlign: "center", padding: "40px", color: "#666", fontSize: "18px" }}>
-            👆 Selecciona Usuario, Post o Comentario para comenzar
+          <p
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "#666",
+              fontSize: "18px",
+            }}
+          >
+            Selecciona Usuario, Post o Comentario para comenzar
           </p>
         </div>
       ) : (
         <div className="table-container">
           {loading && <p>Cargando datos...</p>}
           {error && <p style={{ color: "red" }}>Error: {error}</p>}
-          
+
           {!loading && rows.length > 0 && (
             <Table
               rows={rows}
@@ -213,7 +224,7 @@ function App() {
               No hay datos para mostrar
             </p>
           )}
-          
+
           <button
             className="btn"
             onClick={() => {
@@ -223,7 +234,7 @@ function App() {
           >
             Agregar Nuevo
           </button>
-          
+
           {modalOpen && (
             <Modal
               closeModal={() => setModalOpen(false)}
