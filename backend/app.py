@@ -98,7 +98,7 @@ def create_node(type_name):
                 return jsonify({"error": "Falta idu (ID usuario quien publica)"}), 400
             
             try:
-                idu = int(idu)
+                int_idu = int(idu)
             except:
                 return jsonify({"error": "idu debe ser entero"}), 400
 
@@ -107,6 +107,7 @@ def create_node(type_name):
                 "MATCH (u:User {idu: $idu}) RETURN u",
                 idu=idu
             ).data()
+            print(user_check)
             if not user_check:
                 return jsonify({"error": f"No existe el usuario con idu '{idu}'"}), 404
 
