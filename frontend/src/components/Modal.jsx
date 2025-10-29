@@ -4,7 +4,7 @@ import "./Modal.css";
 
 export const Modal = ({ closeModal, onSubmit, defaultValue, formFields }) => {
   const [formState, setFormState] = useState(
-    defaultValue || Object.fromEntries(formFields.map((field) => [field, " "]))
+    defaultValue || Object.fromEntries(formFields.map((field) => [field, ""]))
   );
 
   const [errors, setErrors] = useState("");

@@ -29,6 +29,7 @@ COPY . .
 # Expose the port that the application listens on.
 EXPOSE 5000
 
+RUN python constraints.py
 RUN python seed_data.py
 # Run the application.
 CMD python app.py

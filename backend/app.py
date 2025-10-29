@@ -3,7 +3,7 @@ from flask_cors import CORS
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 import os
-import datetime
+from datetime import datetime
 
 load_dotenv()  # Lee variables del archivo .env
 
@@ -58,43 +58,115 @@ def get_comments():
         print(f"Comments found: {comments}")  # Debug
         return jsonify(comments), 200
 
+VALID_LIKES = ["megusta", "nomegusta"]
+
 @app.route("/node/<type_name>", methods=["POST"])
 def create_node(type_name):
     body = request.get_json()
     label = node_label_for_type(type_name)
     node_id_label = node_id_label_for_type(type_name)
-    if not label:
-        return jsonify({"error": "Tipo no válido"}), 400
-    if not node_id_label:
+
+    if not label or not node_id_label:
         return jsonify({"error": "Tipo no válido"}), 400
 
-    node_id = body.get(f"{node_id_label}")
-    if not node_id:
-        return jsonify({"error": "Falta 'id'"}), 400
-    
+
+    if body.get(node_id_label) is None:
+        return jsonify({"error": "Falta el ID del nodo"}), 400
+
+ 
+    try:
+        node_id = int(body[node_id_label])
+    except:
+        return jsonify({"error": f"{node_id_label} debe ser un número entero"}), 400
+
     with driver.session() as session:
-        cypher = f"""
-        MERGE (n:{label} {{ {node_id_label}: $id }})
-        SET n += $props
-        """
+
+ 
+        exists = session.run(
+            f"MATCH (n:{label} {{ {node_id_label}: $id }}) RETURN n LIMIT 1",
+            id=node_id
+        ).single()
+
+        if exists:
+            return jsonify({"error": f"El ID '{node_id}' ya está en uso"}), 409
+
+
         if label == "Post":
-           cypher += """
-           WITH n
-           MERGE (u:User {idu: $idu})
-           MERGE (u)-[:PUBLICA]->(n)
-           """
+            
+            idu = body.get("idu")
+            if idu is None:
+                return jsonify({"error": "Falta idu (ID usuario quien publica)"}), 400
+            
+            try:
+                idu = int(idu)
+            except:
+                return jsonify({"error": "idu debe ser entero"}), 400
+
+
+            user_check = session.run(
+                "MATCH (u:User {idu: $idu}) RETURN u",
+                idu=idu
+            ).data()
+            if not user_check:
+                return jsonify({"error": f"No existe el usuario con idu '{idu}'"}), 404
+
+        elif label == "Comment":
+ 
+            required = ["idu", "idau", "idp", "likeNotLike"]
+            for field in required:
+                if field not in body:
+                    return jsonify({"error": f"Falta '{field}'"}), 400
+
+
+            try:
+                idu = int(body.get("idu"))
+                idau = int(body.get("idau"))
+                idp = int(body.get("idp"))
+            except:
+                return jsonify({"error": "idu, idau e idp deben ser enteros"}), 400
+
+
+            check = session.run("""
+                MATCH (u:User {idu: $idu})
+                MATCH (aut:User {idu: $idau})
+                MATCH (p:Post {idp: $idp})
+                RETURN u, aut, p
+            """, idu=idu, idau=idau, idp=idp).single()
+
+            if not check:
+                return jsonify({"error": "Usuario/Post/Autorizador inexistente"}), 404
+
+
+            like = body.get("likeNotLike")
+            if like not in VALID_LIKES:
+                return jsonify({"error": "likeNotLike debe ser 'megusta' o 'nomegusta'"}), 400
+
+
+            body["fechorCom"] = datetime.utcnow().isoformat()
+            body["fechorAut"] = datetime.utcnow().isoformat()
+
+
+        cypher = f"CREATE (n:{label}) SET n += $props "
+
+        if label == "Post":
+            cypher += """
+            WITH n
+            MATCH (u:User {idu: $idu})
+            MERGE (u)-[:PUBLICA]->(n)
+            """
         elif label == "Comment":
             cypher += """
             WITH n
-            MERGE (u:User {idu: $idu})
-            MERGE (aut:User {idu: $idau})
-            MERGE (p:Post {idp: $idp})
+            MATCH (u:User {idu: $idu})
+            MATCH (aut:User {idu: $idau})
+            MATCH (p:Post {idp: $idp})
             MERGE (p)-[:TIENE]->(n)
             MERGE (u)-[:HACE]->(n)
             MERGE (aut)-[:AUTORIZA]->(n)
             """
+
         cypher += "RETURN n { .* } AS node"
-        
+
         result = session.run(
             cypher,
             id=node_id,
@@ -102,15 +174,11 @@ def create_node(type_name):
             idu=body.get("idu"),
             idp=body.get("idp"),
             idau=body.get("idau")
-    )
+        )
 
         record = result.single()
-        if record is None:
-            print("No se devolvió ningún resultado del query:")
-            print(cypher)
-            return jsonify({"error": "No se pudo crear el nodo o no se encontró el usuario/post"}), 400
+        node = record["node"] if record else None
 
-        node = record["node"]
         return jsonify(node), 201
 
 
@@ -125,12 +193,100 @@ def update_node(type_name, node_id):
         return jsonify({"error": "Tipo no válido"}), 400
 
     with driver.session() as session:
-        cypher = f"MATCH (n:{label} {{ {node_id_label}: $id }}) SET n += $props RETURN n {{ .* }} as node"
-        result = session.run(cypher, id=node_id, props=body)
-        record = result.single()
+        if label == "Post":
+            idu = body.get("idu")
+            if not idu:
+                return jsonify({"error": "Falta 'idu' (usuario que hace el post)"}), 400
+
+            # Obtener el usuario actual del post
+            current_rel = session.run("""
+                MATCH (u:User)-[:HACE]->(p:Post {idp: $id})
+                RETURN u.idu AS idu
+            """, id=node_id).single()
+
+            current_idu = current_rel["idu"] if current_rel else None
+
+            # Si el usuario cambió, reemplazar la relación
+            if current_idu != idu:
+                # Verificar que el nuevo usuario exista
+                user_exists = session.run(
+                    "MATCH (u:User {idu: $idu}) RETURN u", idu=idu
+                ).single()
+                if not user_exists:
+                    return jsonify({"error": f"Usuario con idu={idu} no existe"}), 404
+
+                # Reemplazar relación
+                session.run("""
+                    MATCH (p:Post {idp: $id})
+                    OPTIONAL MATCH (oldU:User)-[r:HACE]->(p)
+                    DELETE r
+                    WITH p
+                    MATCH (newU:User {idu: $idu})
+                    MERGE (newU)-[:HACE]->(p)
+                """, id=node_id, idu=idu)
+
+        elif label == "Comment":
+            idu = body.get("idu")
+            idau = body.get("idau")
+            idp = body.get("idp")
+
+            if not all([idu, idau, idp]):
+                return jsonify({
+                    "error": "Faltan 'idu', 'idau' o 'idp' para las relaciones del comentario"
+                }), 400
+
+            # Obtener relaciones actuales
+            current_rels = session.run("""
+                MATCH (c:Comment {idc: $id})
+                OPTIONAL MATCH (u:User)-[:HACE]->(c)
+                OPTIONAL MATCH (a:User)-[:AUTORIZA]->(c)
+                OPTIONAL MATCH (p:Post)-[:TIENE]->(c)
+                RETURN u.idu AS current_idu, a.idu AS current_idau, p.idp AS current_idp
+            """, id=node_id).single()
+
+            current_idu = current_rels["current_idu"]
+            current_idau = current_rels["current_idau"]
+            current_idp = current_rels["current_idp"]
+
+            # Verificar existencia de los nuevos nodos
+            verify_query = """
+                MATCH (u:User {idu: $idu})
+                MATCH (a:User {idu: $idau})
+                MATCH (p:Post {idp: $idp})
+                RETURN u, a, p
+            """
+            check = session.run(verify_query, idu=idu, idau=idau, idp=idp).single()
+            if not check:
+                return jsonify({"error": "Usuario o post no existen"}), 404
+
+            # Actualizar relaciones que hayan cambiado
+            session.run("""
+                MATCH (c:Comment {idc: $id})
+                OPTIONAL MATCH (oldU:User)-[r1:HACE]->(c)
+                OPTIONAL MATCH (oldA:User)-[r2:AUTORIZA]->(c)
+                OPTIONAL MATCH (oldP:Post)-[r3:TIENE]->(c)
+                DELETE r1, r2, r3
+                WITH c
+                MATCH (u:User {idu: $idu})
+                MATCH (a:User {idu: $idau})
+                MATCH (p:Post {idp: $idp})
+                MERGE (u)-[:HACE]->(c)
+                MERGE (a)-[:AUTORIZA]->(c)
+                MERGE (p)-[:TIENE]->(c)
+            """, id=node_id, idu=idu, idau=idau, idp=idp)
+
+        # 3️⃣ Actualizar propiedades del nodo
+        update_query = f"""
+        MATCH (n:{label} {{{node_id_label}: $id}})
+        SET n += $props
+        RETURN n {{ .* }} AS node
+        """
+        record = session.run(update_query, id=node_id, props=body).single()
+
         if not record:
-            return jsonify({"error": "Nodo no encontrado"}), 404
-    return jsonify(record["node"]), 200
+            return jsonify({"error": "Error al actualizar nodo"}), 400
+
+        return jsonify(record["node"]), 200
 
 @app.route("/node/<type_name>/<node_id>", methods=["DELETE"])
 def delete_node(type_name, node_id):
