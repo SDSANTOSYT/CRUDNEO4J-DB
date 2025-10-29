@@ -14,7 +14,7 @@ function App() {
   const [rowToEdit, setRowToEdit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  
   // Estados para Inciso C
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedPostId, setSelectedPostId] = useState("");
@@ -133,11 +133,13 @@ function App() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(`${errorData.error}`);
+          throw new Error(errorData.error || `Error: ${response.status}`);
         }
 
-        // Recargar datos
+        // Cerrar modal y recargar datos
+        setModalOpen(false);
         await fetchData();
+        alert("¡Registro creado exitosamente!");
       } else {
         // Actualizar existente
         const rowData = rows[rowToEdit];
@@ -161,15 +163,19 @@ function App() {
         );
 
         if (!response.ok) {
-          throw new Error("Error al actualizar");
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error: ${response.status}`);
         }
 
-        // Recargar datos
+        // Cerrar modal y recargar datos
+        setModalOpen(false);
         await fetchData();
+        alert("¡Registro actualizado exitosamente!");
       }
     } catch (err) {
       setError(err.message);
       console.error("Error submitting:", err);
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -198,7 +204,7 @@ function App() {
   const consultarPostsUsuario = async () => {
     console.log("=== CONSULTA 1 INICIADA ===");
     console.log("Usuario ID:", selectedUserId);
-
+    
     if (!selectedUserId) {
       alert("Por favor ingresa un ID de Usuario");
       return;
@@ -208,18 +214,18 @@ function App() {
     try {
       const url = `http://localhost:5000/consulta/posts-usuario/${selectedUserId}`;
       console.log("Fetching URL:", url);
-
+      
       const response = await fetch(url);
       console.log("Response status:", response.status);
-
+      
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-
+      
       const data = await response.json();
       console.log("✅ Posts del usuario recibidos:", data);
       console.log("Cantidad de posts:", data.length);
-
+      
       setPostsUsuario(data);
     } catch (err) {
       console.error("❌ Error consultando posts del usuario:", err);
@@ -234,7 +240,7 @@ function App() {
   const consultarComentariosPost = async () => {
     console.log("=== CONSULTA 2 INICIADA ===");
     console.log("Post ID:", selectedPostId);
-
+    
     if (!selectedPostId) {
       alert("Por favor ingresa un ID de Post");
       return;
@@ -244,18 +250,18 @@ function App() {
     try {
       const url = `http://localhost:5000/consulta/comentarios-post/${selectedPostId}`;
       console.log("Fetching URL:", url);
-
+      
       const response = await fetch(url);
       console.log("Response status:", response.status);
-
+      
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-
+      
       const data = await response.json();
       console.log("✅ Comentarios del post recibidos:", data);
       console.log("Cantidad de comentarios:", data.length);
-
+      
       setComentariosPost(data);
     } catch (err) {
       console.error("❌ Error consultando comentarios:", err);
@@ -312,6 +318,7 @@ function App() {
               onSubmit={handleSubmit}
               defaultValue={rowToEdit !== null && rows[rowToEdit]}
               formFields={getFormFields()}
+              entityType={selectedTab}
             />
           )}
         </div>
@@ -320,45 +327,16 @@ function App() {
       {/* Sección Inciso C */}
       <div style={{ marginTop: "60px", marginBottom: "60px" }}>
         <h2 style={{ marginBottom: "40px" }}>Inciso C - Consultas</h2>
-
+        
         {/* Consulta 1: Posts de un Usuario */}
-        <div
-          className="table-container"
-          style={{
-            marginBottom: "40px",
-            minHeight: "auto",
-            height: "auto",
-            padding: "30px",
-          }}
-        >
-          <h3
-            style={{
-              color: "var(--color4)",
-              fontSize: "24px",
-              marginBottom: "15px",
-              fontFamily: "Arial, Helvetica, sans-serif",
-            }}
-          >
+        <div className="table-container" style={{ marginBottom: "40px", minHeight: "auto", height: "auto", padding: "30px" }}>
+          <h3 style={{ color: "var(--color4)", fontSize: "24px", marginBottom: "15px", fontFamily: "Arial, Helvetica, sans-serif" }}>
             Consulta 1: Posts de un Usuario
           </h3>
           <p>Muestra los posts que ha creado un usuario específico</p>
 
-          <div
-            style={{
-              marginBottom: "30px",
-              display: "flex",
-              gap: "15px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <label
-              style={{
-                color: "var(--color4)",
-                fontWeight: "bold",
-                fontFamily: "Arial, Helvetica, sans-serif",
-              }}
-            >
+          <div style={{ marginBottom: "30px", display: "flex", gap: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ color: "var(--color4)", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif" }}>
               ID del Usuario:
             </label>
             <input
@@ -371,7 +349,7 @@ function App() {
                 borderRadius: "10px",
                 border: "none",
                 width: "200px",
-                fontFamily: "Arial, Helvetica, sans-serif",
+                fontFamily: "Arial, Helvetica, sans-serif"
               }}
             />
             <button
@@ -394,50 +372,19 @@ function App() {
               />
             </div>
           ) : (
-            <p>
-              No hay posts para mostrar. Ingresa un ID de usuario y presiona
-              Consultar.
-            </p>
+            <p>No hay posts para mostrar. Ingresa un ID de usuario y presiona Consultar.</p>
           )}
         </div>
 
         {/* Consulta 2: Comentarios de un Post */}
-        <div
-          className="table-container"
-          style={{ minHeight: "auto", height: "auto", padding: "30px" }}
-        >
-          <h3
-            style={{
-              color: "var(--color4)",
-              fontSize: "24px",
-              marginBottom: "15px",
-              fontFamily: "Arial, Helvetica, sans-serif",
-            }}
-          >
+        <div className="table-container" style={{ minHeight: "auto", height: "auto", padding: "30px" }}>
+          <h3 style={{ color: "var(--color4)", fontSize: "24px", marginBottom: "15px", fontFamily: "Arial, Helvetica, sans-serif" }}>
             Consulta 2: Comentarios de un POST
           </h3>
-          <p>
-            Lista los comentarios de un POST mostrando fecha de creación, fecha
-            de autorización, usuario que lo hizo y si fue "megusta" o
-            "nomegusta"
-          </p>
+          <p>Lista los comentarios de un POST mostrando fecha de creación, fecha de autorización, usuario que lo hizo y si fue "megusta" o "nomegusta"</p>
 
-          <div
-            style={{
-              marginBottom: "30px",
-              display: "flex",
-              gap: "15px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <label
-              style={{
-                color: "var(--color4)",
-                fontWeight: "bold",
-                fontFamily: "Arial, Helvetica, sans-serif",
-              }}
-            >
+          <div style={{ marginBottom: "30px", display: "flex", gap: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ color: "var(--color4)", fontWeight: "bold", fontFamily: "Arial, Helvetica, sans-serif" }}>
               ID del Post:
             </label>
             <input
@@ -450,7 +397,7 @@ function App() {
                 borderRadius: "10px",
                 border: "none",
                 width: "200px",
-                fontFamily: "Arial, Helvetica, sans-serif",
+                fontFamily: "Arial, Helvetica, sans-serif"
               }}
             />
             <button
@@ -473,10 +420,7 @@ function App() {
               />
             </div>
           ) : (
-            <p>
-              No hay comentarios para mostrar. Ingresa un ID de post y presiona
-              Consultar.
-            </p>
+            <p>No hay comentarios para mostrar. Ingresa un ID de post y presiona Consultar.</p>
           )}
         </div>
       </div>
